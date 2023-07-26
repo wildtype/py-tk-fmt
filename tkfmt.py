@@ -24,9 +24,12 @@ class PytkfmtApp:
         main_frame.pack(expand=True, fill="both", padx=2, pady=2, side="top")
 
         self.text_input.bind('<Control-Shift-Return>', self.fmt)
+        self.text_input.bind('<Control-Shift-Key-S>', self.pg_format)
+        self.text_input.focus()
 
         instruction = 'Paste text here then press \
-Control-Shift-Return to format'
+Control-Shift-Return to format using fmt(1),\nor Control-Shift-S to format \
+with pg_format(1)'
 
         self.text_input.insert('end', instruction)
 
@@ -52,9 +55,24 @@ Control-Shift-Return to format'
         tmp.close()
         return result_text
 
+    def execute_pg_format(self, text):
+        tmp = tempfile.NamedTemporaryFile(mode='w')
+        tmp.write(text)
+        tmp.seek(0)
+        result = subprocess.run(['pg_format', tmp.name], capture_output=True)
+        result_text = result.stdout.decode('utf-8').strip()
+        tmp.close()
+        return result_text
+
+
     def fmt(self, _evt):
         text = self.get_text()
         result_text = self.execute_fmt(text)
+        self.set_text(result_text)
+
+    def pg_format(self, _evt):
+        text = self.get_text()
+        result_text = self.execute_pg_format(text)
         self.set_text(result_text)
 
 
