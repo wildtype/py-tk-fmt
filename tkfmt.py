@@ -25,6 +25,7 @@ class PytkfmtApp:
 
         self.text_input.bind('<Control-Shift-Return>', self.fmt)
         self.text_input.bind('<Control-Shift-Key-S>', self.pg_format)
+        self.text_input.bind('<Control-Shift-Key-D>', self.md_dokuwiki)
         self.text_input.focus()
 
         instruction = 'Paste text here then press \
@@ -64,6 +65,14 @@ with pg_format(1)'
         tmp.close()
         return result_text
 
+    def execute_pandoc_md_dokuwiki(self, text):
+        tmp = tempfile.NamedTemporaryFile(mode='w')
+        tmp.write(text)
+        tmp.seek(0)
+        result = subprocess.run(['pandoc', '-f', 'markdown', '-t', 'dokuwiki', tmp.name], capture_output=True)
+        result_text = result.stdout.decode('utf-8').strip()
+        tmp.close()
+        return result_text
 
     def fmt(self, _evt):
         text = self.get_text()
@@ -73,6 +82,11 @@ with pg_format(1)'
     def pg_format(self, _evt):
         text = self.get_text()
         result_text = self.execute_pg_format(text)
+        self.set_text(result_text)
+
+    def md_dokuwiki(self, _evt):
+        text = self.get_text()
+        result_text = self.execute_pandoc_md_dokuwiki(text)
         self.set_text(result_text)
 
 
