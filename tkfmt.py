@@ -23,15 +23,30 @@ class PytkfmtApp:
 
         main_frame.pack(expand=True, fill="both", padx=2, pady=2, side="top")
 
-        self.text_input.bind('<Control-Shift-Return>', self.fmt)
-        self.text_input.bind('<Control-Shift-Key-S>', self.pg_format)
-        self.text_input.bind('<Control-Shift-Key-D>', self.md_dokuwiki)
+        fmt_key = '<Control-Shift-Return>'
+        fmt_command = ['fmt', '-72']
+        self.text_input.bind(fmt_key, self.do_format(fmt_command))
+
+        pgformat_key = '<Control-Shift-Key-S>'
+        pgformat_command = ['pg_format']
+        self.text_input.bind(pgformat_key, self.do_format(pgformat_command))
+
+        md_dokuwiki_key = '<Control-Shift-Key-D>'
+        md_dokuwiki_command = ['pandoc', '-f', 'markdown', '-t', 'dokuwiki']
+        self.text_input.bind(md_dokuwiki_key, self.do_format(md_dokuwiki_command))
+
+        jq_key = '<Control-Shift-Key-J>'
+        jq_command = ['jq', '.']
+        self.text_input.bind(jq_key, self.do_format(jq_command))
+
         self.text_input.focus()
 
-        instruction = 'Paste text here then press \
-Control-Shift-Return to format using fmt(1),\nor Control-Shift-S to format \
-with pg_format(1)'
+        instruction = ''' Paste text here then press:
 
+  * Control-Shift-Return to format with fmt(1)
+  * Control-Shift-S to format SQL with pg_format(1)
+  * Control-Shift-D to convert markdown to dokuwiki with pandoc(1)
+  * Control-Shift-J to format JSON with jq(1)'''
         self.text_input.insert('end', instruction)
 
         # Main widget
@@ -47,47 +62,23 @@ with pg_format(1)'
         self.text_input.delete('1.0', 'end')
         self.text_input.insert('end', text)
 
-    def execute_fmt(self, text):
-        tmp = tempfile.NamedTemporaryFile(mode='w')
-        tmp.write(text)
-        tmp.seek(0)
-        result = subprocess.run(['fmt', '-72', tmp.name], capture_output=True)
-        result_text = result.stdout.decode('utf-8').strip()
-        tmp.close()
-        return result_text
+    def do_format(self, command):
+        def execute_formatter(command, text):
+            tmp = tempfile.NamedTemporaryFile(mode='w')
+            tmp.write(text)
+            tmp.seek(0)
+            complete_command = command + [tmp.name]
+            result = subprocess.run(complete_command, capture_output=True)
+            result_text = result.stdout.decode('utf-8').strip()
+            tmp.close()
+            return result_text
 
-    def execute_pg_format(self, text):
-        tmp = tempfile.NamedTemporaryFile(mode='w')
-        tmp.write(text)
-        tmp.seek(0)
-        result = subprocess.run(['pg_format', tmp.name], capture_output=True)
-        result_text = result.stdout.decode('utf-8').strip()
-        tmp.close()
-        return result_text
+        def perform_formatting(_evt):
+            text = self.get_text()
+            result_text = execute_formatter(command, text)
+            self.set_text(result_text)
 
-    def execute_pandoc_md_dokuwiki(self, text):
-        tmp = tempfile.NamedTemporaryFile(mode='w')
-        tmp.write(text)
-        tmp.seek(0)
-        result = subprocess.run(['pandoc', '-f', 'markdown', '-t', 'dokuwiki', tmp.name], capture_output=True)
-        result_text = result.stdout.decode('utf-8').strip()
-        tmp.close()
-        return result_text
-
-    def fmt(self, _evt):
-        text = self.get_text()
-        result_text = self.execute_fmt(text)
-        self.set_text(result_text)
-
-    def pg_format(self, _evt):
-        text = self.get_text()
-        result_text = self.execute_pg_format(text)
-        self.set_text(result_text)
-
-    def md_dokuwiki(self, _evt):
-        text = self.get_text()
-        result_text = self.execute_pandoc_md_dokuwiki(text)
-        self.set_text(result_text)
+        return perform_formatting
 
 
 if __name__ == "__main__":
